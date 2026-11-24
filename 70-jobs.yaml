@@ -1,0 +1,44 @@
+# sync-wave 5: jobs (backup CronJob). PruneLast so a running Job is not deleted
+# before its replacement is healthy. Smoke Jobs are run out-of-band by scripts.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ontoaxis-jobs
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ontoaxis
+    ontoaxis.io/component: jobs
+    ontoaxis.io/environment: kind
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ontoaxis
+  sources:
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      path: deploy/helm/ontoaxis-jobs
+      helm:
+        valueFiles:
+          - $values/deploy/values/kind.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oa-data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

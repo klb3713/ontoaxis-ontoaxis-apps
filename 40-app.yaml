@@ -1,0 +1,43 @@
+# sync-wave 2: app (ontoaxis-core, web, Meilisearch). core runs migrations at startup,
+# so this wave waits for platform + data waves to become Healthy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ontoaxis-app
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ontoaxis
+    ontoaxis.io/component: app
+    ontoaxis.io/environment: kind
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ontoaxis
+  sources:
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      path: deploy/helm/ontoaxis-app
+      helm:
+        valueFiles:
+          - $values/deploy/values/kind.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oa-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

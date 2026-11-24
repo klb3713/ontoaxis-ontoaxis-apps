@@ -1,0 +1,40 @@
+# sync-wave 3: edge. Consumes the existing generated Envoy route/policy truth
+# source directly via a Directory application (no chart copy). The Envoy Gateway
+# control plane and GatewayClass are installed once by bootstrap.sh.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ontoaxis-edge
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ontoaxis
+    ontoaxis.io/component: edge
+    ontoaxis.io/environment: kind
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ontoaxis
+  source:
+    repoURL: https://github.com/ontoaxis/ontoaxis.git
+    targetRevision: main
+    path: deploy/edge/generated
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oa-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

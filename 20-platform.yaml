@@ -1,0 +1,42 @@
+# sync-wave 0: platform (Postgres, Keycloak, OpenFGA, Valkey, SeaweedFS).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ontoaxis-platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ontoaxis
+    ontoaxis.io/component: platform
+    ontoaxis.io/environment: kind
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ontoaxis
+  sources:
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/ontoaxis/ontoaxis.git
+      targetRevision: main
+      path: deploy/helm/ontoaxis-platform
+      helm:
+        valueFiles:
+          - $values/deploy/values/kind.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oa-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

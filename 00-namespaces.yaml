@@ -1,0 +1,37 @@
+# sync-wave -10: namespaces + baseline (ResourceQuota/LimitRange live in charts).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ontoaxis-namespaces
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ontoaxis
+    ontoaxis.io/component: namespaces
+    ontoaxis.io/environment: kind
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ontoaxis
+  source:
+    repoURL: https://github.com/ontoaxis/ontoaxis.git
+    targetRevision: main
+    path: deploy/argocd/manifests/namespaces
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
